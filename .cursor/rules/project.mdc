@@ -728,3 +728,273 @@ Avant de commit :
 - [ ] Tags `@see` pour références croisées
 - [ ] Pas de code commenté mort
 - [ ] Coverage Compodoc > 80% (vérifier avec `npm run docs:coverage`)
+
+## Bundle Analysis (source-map-explorer)
+
+### Philosophie
+
+- ✅ Analyser le bundle **avant chaque déploiement production**
+- ✅ Vérifier que le budget (500 KB warning, 1 MB error) est respecté
+- ✅ Identifier les opportunités d'optimisation (lazy loading, tree-shaking)
+- ❌ Ne pas ajouter de dépendances lourdes sans justification
+
+### Outil Installé
+
+**source-map-explorer** : Analyse précise du bundle de production (esbuild)
+
+```bash
+npm install source-map-explorer --save-dev
+```
+
+### Configuration
+
+#### Source Maps Activés (project.json)
+
+```json
+{
+  "configurations": {
+    "production": {
+      "sourceMap": true,  // ← OBLIGATOIRE pour l'analyse
+      "budgets": [
+        {
+          "type": "initial",
+          "maximumWarning": "500kb",
+          "maximumError": "1mb"
+        }
+      ]
+    }
+  }
+}
+```
+
+### Scripts Disponibles
+
+```bash
+# Build production avec source maps
+npm run build:prod
+
+# Analyser le bundle (génère bundle-report.html)
+npm run analyze
+
+# Analyser avec tailles gzippées
+npm run analyze:gzip
+
+# Export JSON pour CI/CD
+npm run analyze:json
+
+# Build + Analyse en une commande
+npm run build:analyze
+```
+
+### Workflow d'Analyse
+
+#### 1. Build et Analyse
+
+```bash
+npm run build:analyze
+```
+
+**Output** :
+- ✅ Build production dans `dist/apps/mini-crm/browser/`
+- ✅ Rapport HTML dans `dist/apps/mini-crm/bundle-report.html`
+- ✅ Source maps utilisés pour tracer jusqu'au code TypeScript
+
+#### 2. Ouvrir le Rapport
+
+```bash
+# Windows
+start dist/apps/mini-crm/bundle-report.html
+
+# macOS
+open dist/apps/mini-crm/bundle-report.html
+
+# Linux
+xdg-open dist/apps/mini-crm/bundle-report.html
+```
+
+#### 3. Interpréter le Rapport
+
+**Vue Treemap interactive** :
+```
+📦 Total: 627.51 KB (⚠️ dépasse budget 500 KB)
+
+Breakdown:
+├─ styles-*.css      : 315.78 KB (50.3%) ← Bootstrap CSS
+├─ main-*.js         : 196.64 KB (31.3%) ← Code app + Angular
+├─ scripts-*.js      : 80.46 KB  (12.8%) ← Bootstrap JS (⚠️ à retirer ?)
+└─ polyfills-*.js    : 34.63 KB  (5.5%)  ← Zone.js
+```
+
+**Questions à se poser** :
+- ⚠️ Bootstrap JS (80 KB) est-il utilisé ? → Si non, retirer
+- ⚠️ Routes lazy-loadées ? → Si non, implémenter
+- ⚠️ Libs inutilisées ? → Tree-shaking effectif ?
+- ⚠️ Duplications de code ? → Imports circulaires ?
+
+### Seuils et Budgets
+
+| Taille Bundle | Statut | Action |
+|---------------|--------|--------|
+| < 500 KB | ✅ Excellent | Continuer |
+| 500-800 KB | ⚠️ Warning | Optimiser si possible |
+| > 1 MB | ❌ Erreur | **Action requise** |
+
+**Budgets configurés** (project.json) :
+- **Initial bundle** : 500 KB warning, 1 MB error
+- **Component styles** : 4 KB warning, 8 KB error
+
+### Optimisations Courantes
+
+#### 1. Retirer Bootstrap JS Inutilisé
+
+**Problème** : Bootstrap JS (80 KB) chargé mais inutilisé
+
+```json
+// apps/mini-crm/project.json
+{
+  "scripts": ["node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"]
+}
+```
+
+**Solution** : Retirer si non utilisé
+
+```json
+{
+  "scripts": []  // Vide si aucun modal/dropdown Bootstrap
+}
+```
+
+**Gain** : -80 KB (-13%)
+
+#### 2. Lazy Loading des Routes
+
+**Problème** : Toutes les routes chargées au démarrage
+
+```typescript
+// ❌ Eager loading
+import { OrdersComponent } from './orders/orders.component';
+
+export const routes = [
+  { path: 'orders', component: OrdersComponent }
+];
+```
+
+**Solution** : Lazy loading
+
+```typescript
+// ✅ Lazy loading
+export const routes = [
+  {
+    path: 'orders',
+    loadComponent: () => import('./orders/orders.component')
+      .then(m => m.OrdersComponent)
+  }
+];
+```
+
+**Gain** : -50 à -150 KB selon taille du module
+
+#### 3. Tree-Shaking Optimisé
+
+**Problème** : Import d'une lib entière
+
+```typescript
+// ❌ Import complet
+import * as _ from 'lodash';
+
+// ❌ Import barrel
+import { debounce } from 'lodash';
+```
+
+**Solution** : Import direct
+
+```typescript
+// ✅ Import individuel
+import debounce from 'lodash-es/debounce';
+
+// ✅ Ou utiliser lodash-es
+import { debounce } from 'lodash-es';
+```
+
+**Gain** : Variable selon lib
+
+#### 4. Optimiser les Images
+
+**Problème** : Images non optimisées
+
+```html
+<!-- ❌ Image classique -->
+<img src="assets/logo.png" alt="Logo">
+```
+
+**Solution** : NgOptimizedImage
+
+```typescript
+// Importer dans le composant
+import { NgOptimizedImage } from '@angular/common';
+
+@Component({
+  imports: [NgOptimizedImage]
+})
+```
+
+```html
+<!-- ✅ Image optimisée -->
+<img ngSrc="assets/logo.png" width="200" height="100" priority alt="Logo">
+```
+
+### Checklist Avant Production
+
+Avant chaque déploiement :
+
+```bash
+npm run build:analyze
+```
+
+- [ ] Bundle total < 500 KB (ou justifier si > 500 KB)
+- [ ] Source maps activés en production
+- [ ] Bootstrap JS retiré si non utilisé
+- [ ] Routes principales lazy-loadées
+- [ ] Pas de libs inutilisées (vérifier treemap)
+- [ ] Tree-shaking effectif (imports optimisés)
+- [ ] Images optimisées avec NgOptimizedImage
+- [ ] Lighthouse performance > 90
+
+### Intégration CI/CD
+
+#### GitHub Actions (exemple)
+
+```yaml
+# .github/workflows/ci.yml
+- name: Build Production
+  run: npm run build:prod
+
+- name: Analyze Bundle
+  run: npm run analyze:json
+
+- name: Check Bundle Size
+  run: |
+    MAIN_SIZE=$(jq '.results[0].totalBytes' dist/apps/mini-crm/bundle-report.json)
+    MAX_SIZE=$((1024 * 1024)) # 1MB
+    
+    if [ $MAIN_SIZE -gt $MAX_SIZE ]; then
+      echo "❌ Bundle exceeds 1MB!"
+      exit 1
+    fi
+    
+    echo "✅ Bundle size OK: $(($MAIN_SIZE / 1024)) KB"
+
+- name: Upload Bundle Report
+  uses: actions/upload-artifact@v3
+  with:
+    name: bundle-report
+    path: dist/apps/mini-crm/bundle-report.html
+```
+
+### Ressources
+
+- [source-map-explorer Documentation](https://github.com/danvk/source-map-explorer)
+- [Angular Performance Guide](https://angular.dev/best-practices/runtime-performance)
+- [Web.dev Performance](https://web.dev/performance/)
+- [Bundlephobia](https://bundlephobia.com/) - Vérifier taille des libs avant installation
+

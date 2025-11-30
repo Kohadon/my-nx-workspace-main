@@ -35,7 +35,12 @@
     "lighthouse:docs": "lhci autorun --config=lighthouserc.docs.json",
     "lighthouse:docs:build": "npm run docs:build && lhci autorun --config=lighthouserc.docs.json",
     "audit:docs": "concurrently --kill-others --success first \"npm run docs\" \"wait-on http://localhost:8080 && npm run lighthouse:docs\"",
-    "audit:docs+app": "concurrently \"npm run docs\" \"npm run start\""
+    "audit:docs+app": "concurrently \"npm run docs\" \"npm run start\"",
+    "build:prod": "nx build mini-crm --configuration=production",
+    "analyze": "source-map-explorer dist/apps/mini-crm/browser/**/*.js --html dist/apps/mini-crm/bundle-report.html",
+    "analyze:json": "source-map-explorer dist/apps/mini-crm/browser/**/*.js --json dist/apps/mini-crm/bundle-report.json",
+    "analyze:gzip": "source-map-explorer dist/apps/mini-crm/browser/**/*.js --gzip --html dist/apps/mini-crm/bundle-report-gzip.html",
+    "build:analyze": "npm run build:prod && npm run analyze"
   },
   "private": true,
   "dependencies": {
@@ -89,6 +94,7 @@
     "json-server-auth": "^2.1.0",
     "nx": "21.4.0",
     "prettier": "^2.6.2",
+    "source-map-explorer": "^2.5.3",
     "tslib": "^2.3.0",
     "typescript": "~5.8.2",
     "typescript-eslint": "^8.29.0",

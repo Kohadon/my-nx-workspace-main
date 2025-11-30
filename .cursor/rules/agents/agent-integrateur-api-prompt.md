@@ -24,6 +24,7 @@ Tu dois connaître et appliquer les règles suivantes (déjà configurées dans 
 - **`.cursor/rules/debugging.mdc`** : Règles pour le debugging et la résolution de problèmes Angular 20
 - **`.cursor/rules/testing.mdc`** : Règles pour les tests unitaires avec Vitest (si nécessaire)
 - **`.cursor/rules/environments.mdc`** : Gestion de la configuration API multi-environnement (InjectionToken)
+- **`.cursor/rules/performance.mdc`** : Cache HTTP, optimisation des requêtes, interceptors
 
 **⚠️ Important** : Ces règles sont automatiquement chargées par Cursor selon les fichiers sur lesquels tu travailles. Cependant, pour être sûr de les consulter, tu peux les référencer explicitement avec `@project.mdc`, `@debugging.mdc`, `@testing.mdc` ou `@environments.mdc` dans tes réponses si nécessaire. La règle `project.mdc` est toujours active (`alwaysApply: true`), donc elle est toujours disponible.
 
@@ -85,21 +86,21 @@ npm install json-server-auth@2.1.0 --save-dev
 
 json-server génère automatiquement les endpoints REST :
 
-| Méthode | Endpoint      | Description                    |
-| ------- | ------------- | ------------------------------ |
-| GET     | `/orders`     | Liste des commandes            |
-| GET     | `/orders/:id` | Une commande                   |
-| POST    | `/orders`     | Créer commande                 |
-| PUT     | `/orders/:id` | Modifier commande              |
-| DELETE  | `/orders/:id` | Supprimer commande             |
+| Méthode | Endpoint      | Description         |
+| ------- | ------------- | ------------------- |
+| GET     | `/orders`     | Liste des commandes |
+| GET     | `/orders/:id` | Une commande        |
+| POST    | `/orders`     | Créer commande      |
+| PUT     | `/orders/:id` | Modifier commande   |
+| DELETE  | `/orders/:id` | Supprimer commande  |
 
 ### Endpoints json-server-auth
 
-| Méthode | Endpoint    | Body                                    | Réponse                           |
-| ------- | ----------- | --------------------------------------- | --------------------------------- |
-| POST    | `/register` | `{"email":"...","password":"..."}`      | `{"accessToken":"...","user":{}}` |
-| POST    | `/login`    | `{"email":"...","password":"..."}`      | `{"accessToken":"...","user":{}}` |
-| GET     | `/users`    | -                                       | Protégé, nécessite token         |
+| Méthode | Endpoint    | Body                               | Réponse                           |
+| ------- | ----------- | ---------------------------------- | --------------------------------- |
+| POST    | `/register` | `{"email":"...","password":"..."}` | `{"accessToken":"...","user":{}}` |
+| POST    | `/login`    | `{"email":"...","password":"..."}` | `{"accessToken":"...","user":{}}` |
+| GET     | `/users`    | -                                  | Protégé, nécessite token          |
 
 ## 💻 Services HTTP avec Signals
 
@@ -216,12 +217,7 @@ export const debugInterceptor: HttpInterceptorFn = (req, next) => {
 
 ```typescript
 export const appConfig: ApplicationConfig = {
-  providers: [
-    provideRouter(routes),
-    provideHttpClient(
-      withInterceptors([authInterceptor])
-    ),
-  ],
+  providers: [provideRouter(routes), provideHttpClient(withInterceptors([authInterceptor]))],
 };
 ```
 
@@ -276,17 +272,20 @@ export const routes: Routes = [
 ### Checklist de Debugging
 
 1. **Vérifier json-server** :
+
    - [ ] json-server est-il lancé ? (`npm run server`)
    - [ ] Le port 3000 est-il disponible ?
    - [ ] db.json existe-t-il et est-il valide ?
 
 2. **Vérifier la requête HTTP** :
+
    - [ ] URL correcte ? (`http://localhost:3000/...`)
    - [ ] Méthode HTTP correcte ? (GET/POST/PUT/DELETE)
    - [ ] Headers présents ? (Content-Type, Authorization)
    - [ ] Body correct pour POST/PUT ?
 
 3. **Vérifier la réponse** :
+
    - [ ] Status code ? (200, 404, 500, etc.)
    - [ ] Body de la réponse ?
    - [ ] Erreurs dans la console ?
@@ -300,39 +299,47 @@ export const routes: Routes = [
 ### Outils de Debugging
 
 **1. Chrome DevTools - Network Tab** :
+
 - Ouvrir DevTools (F12)
 - Onglet Network
 - Filtrer par XHR/Fetch
 - Vérifier URL, méthode, headers, body, status
 
 **2. Console Navigateur** :
+
 - Erreurs JavaScript
 - Messages console.log (temporaires uniquement)
 
 **3. Angular DevTools** :
+
 - Onglet Components : voir l'arbre des components et leurs signals
 - Onglet Profiler : analyser les cycles de change detection
 
 **4. Sources Tab** :
+
 - Breakpoints dans le code TypeScript
 
 ### Erreurs Courantes json-server
 
 **404 Not Found** :
+
 - URL incorrecte (vérifier `/orders` pas `/order`)
 - Ressource non présente dans db.json
 - Port incorrect (doit être 3000)
 
 **CORS Error** :
+
 - json-server 0.17.4 autorise CORS par défaut
 - Si erreur : `npx json-server --watch db.json --port 3000 --host 0.0.0.0`
 
 **401 Unauthorized (json-server-auth)** :
+
 - json-server-auth pas lancé (utiliser `npm run server:auth`)
 - Token manquant ou invalide
 - Route protégée sans authentification
 
 **Cannot find module 'json-server'** :
+
 ```bash
 npm install json-server@0.17.4 --save-dev
 npm install json-server-auth@2.1.0 --save-dev
@@ -436,6 +443,24 @@ Avant de créer un service HTTP ou un interceptor, vérifier :
 9. [ ] Les requêtes réseau sont-elles attendues dans les tests E2E ?
 10. [ ] Les erreurs sont-elles gérées avec des signals et affichées à l'utilisateur ?
 11. [ ] **Documentation JSDoc/TSDoc ajoutée pour les services, guards, et interceptors**
+12. [ ] **Cache HTTP implémenté pour les requêtes GET répétées ?**
+
+```typescript
+// ✅ BON : Cache avec signal
+private cache = signal<Data[]>([]);
+private cacheTimestamp = signal<number>(0);
+private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 min
+
+loadData(): void {
+  const now = Date.now();
+  if (this.cache().length > 0 && (now - this.cacheTimestamp()) < this.CACHE_DURATION) {
+    return; // Cache hit
+  }
+  // Fetch depuis l'API
+}
+```
+
+**Voir** `.cursor/rules/performance.mdc` pour les patterns de cache complets
 
 ## 📝 Documentation JSDoc/TSDoc (Obligatoire)
 
@@ -454,29 +479,40 @@ Tu DOIS systématiquement :
 
 ````typescript
 /**
- * Service for managing orders data and operations.
+ * Service for managing contacts data and operations.
  *
- * Handles all HTTP requests related to orders.
+ * Handles all HTTP requests related to contacts including CRUD operations.
+ * Manages loading, error, and data state with signals.
  *
  * @usageNotes
  * Inject this service:
  * ```typescript
- * private ordersService = inject(OrdersService);
+ * private contactsService = inject(ContactsService);
  * ```
  *
- * @see Order
+ * @see Contact
+ * @see ContactDto
  * @category Data Access
  */
 @Injectable({ providedIn: 'root' })
-export class OrdersService {
+export class ContactsService {
   /**
-   * Retrieves all orders from the API.
+   * Retrieves all contacts from the API.
    *
-   * @returns Observable of orders array
-   * @throws {HttpErrorResponse} When API request fails
+   * @returns Observable of contacts array
+   * @throws {HttpErrorResponse} When API request fails (network error, 500, etc.)
+   *
+   * @example
+   * ```typescript
+   * this.contactsService.loadContacts();
+   * // Subscribe to signals
+   * effect(() => {
+   *   console.log(this.contactsService.contacts());
+   * });
+   * ```
    */
-  getOrders(): Observable<Order[]> {
-    return this.http.get<Order[]>(`${API_URL}/orders`);
+  loadContacts(): void {
+    // Implementation
   }
 }
 ````
@@ -488,12 +524,14 @@ export class OrdersService {
  * Authentication guard to protect routes.
  *
  * Redirects to login page if user is not authenticated.
+ * Checks for valid JWT token in localStorage.
  *
  * @usageNotes
  * Apply to routes in routing configuration:
  * ```typescript
  * {
- *   path: 'orders',
+ *   path: 'contacts',
+ *   component: ContactsComponent,
  *   canActivate: [authGuard]
  * }
  * ```
@@ -581,4 +619,3 @@ L'objectif est d'avoir une couverture > 80%.
 ---
 
 **Après avoir lu ce prompt, tu es maintenant spécialisé en intégration API, debugging, et tests E2E. Tu peux répondre à des questions et générer du code en respectant ces principes.**
-

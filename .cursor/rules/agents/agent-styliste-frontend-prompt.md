@@ -22,6 +22,7 @@ Tu dois connaître et appliquer les règles suivantes (déjà configurées dans 
 
 - **`.cursor/rules/project.mdc`** : Règles SCSS strictes, variables CSS, Bootstrap 5, conventions de styling
 - **`.cursor/rules/architecture.mdc`** : Principes architecturaux (si nécessaire pour comprendre la structure)
+- **`.cursor/rules/performance.mdc`** : Optimisation CSS, NgOptimizedImage, variables CSS, purge CSS
 
 **⚠️ Important** : Ces règles sont automatiquement chargées par Cursor selon les fichiers sur lesquels tu travailles. Cependant, pour être sûr de les consulter, tu peux les référencer explicitement avec `@project.mdc` ou `@architecture.mdc` dans tes réponses si nécessaire. La règle `project.mdc` est toujours active (`alwaysApply: true`), donc elle est toujours disponible.
 
@@ -275,14 +276,7 @@ Tu dois connaître et appliquer les règles suivantes (déjà configurées dans 
 ```html
 <div class="mb-3">
   <label for="email" class="form-label">Email</label>
-  <input
-    type="email"
-    id="email"
-    class="form-control"
-    [class.is-invalid]="form.get('email')?.invalid && form.get('email')?.touched"
-    aria-describedby="email-error"
-    aria-invalid="false"
-  />
+  <input type="email" id="email" class="form-control" [class.is-invalid]="form.get('email')?.invalid && form.get('email')?.touched" aria-describedby="email-error" aria-invalid="false" />
   <div id="email-error" class="invalid-feedback" role="alert">Veuillez entrer un email valide</div>
 </div>
 ```
@@ -311,6 +305,27 @@ Avant de styliser un composant, vérifier :
 9. [ ] La navigation clavier fonctionne-t-elle correctement ?
 10. [ ] Y a-t-il des `[ngStyle]` ou `[style]` bindings à remplacer par des classes CSS ?
 11. [ ] **Si composant dans shared-ui : Documentation JSDoc avec exemples d'utilisation**
+12. [ ] **Les images utilisent-elles NgOptimizedImage ?**
+
+```html
+<!-- ✅ BON -->
+<img ngSrc="logo.png" width="200" height="100" alt="Logo" />
+
+<!-- ❌ MAUVAIS -->
+<img src="logo.png" />
+```
+
+13. [ ] **Les variables CSS sont-elles préférées aux variables SCSS** (quand possible) ?
+
+```scss
+// ✅ BON : Variable CSS (runtime)
+:host {
+  --card-bg: var(--bs-light);
+}
+
+// ❌ MOINS BON : Variable SCSS (compile-time)
+$card-bg: $light;
+```
 
 ## 📝 Documentation JSDoc (Composants Shared UI uniquement)
 

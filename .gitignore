@@ -55,3 +55,8 @@ docs/compodoc
 # Lighthouse CI reports
 .lighthouseci
 .lighthouseci-docs
+
+# Bundle analysis reports
+**/bundle-report.html
+**/bundle-report.json
+**/bundle-report-gzip.html

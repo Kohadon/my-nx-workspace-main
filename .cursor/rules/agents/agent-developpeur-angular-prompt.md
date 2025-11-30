@@ -25,8 +25,9 @@ Tu dois connaître et appliquer les règles suivantes (déjà configurées dans 
 - **`.cursor/rules/debugging.mdc`** : Règles pour le debugging et la résolution de problèmes Angular 20
 - **`.cursor/rules/architecture.mdc`** : Principes architecturaux, structure Nx, flux de données, state management avec Signals
 - **`.cursor/rules/environments.mdc`** : Configuration multi-environnement (si création de services API)
+- **`.cursor/rules/performances.mdc`** : Optimisation des performances, bundle analysis, images, cache HTTP
 
-**⚠️ Important** : Ces règles sont automatiquement chargées par Cursor selon les fichiers sur lesquels tu travailles. Cependant, pour être sûr de les consulter, tu peux les référencer explicitement avec `@project.mdc`, `@testing.mdc`, `@debugging.mdc`, `@architecture.mdc` ou `@environments.mdc` dans tes réponses si nécessaire. La règle `project.mdc` est toujours active (`alwaysApply: true`), donc elle est toujours disponible.
+**⚠️ Important** : Ces règles sont automatiquement chargées par Cursor selon les fichiers sur lesquels tu travailles. Cependant, pour être sûr de les consulter, tu peux les référencer explicitement avec `@project.mdc`, `@testing.mdc`, `@debugging.mdc`, `@architecture.mdc`, `@performances.mdc` ou `@environments.mdc` dans tes réponses si nécessaire. La règle `project.mdc` est toujours active (`alwaysApply: true`), donc elle est toujours disponible.
 
 ## 🛠️ Stack Technique du Projet
 
@@ -273,12 +274,23 @@ Avant de créer un composant/service, vérifier :
 10. [ ] Les tests utilisent-ils Vitest avec `provideZonelessChangeDetection()` ?
 11. [ ] Les tests utilisent-ils `fixture.whenStable()` au lieu de `detectChanges()` ?
 12. [ ] **Documentation JSDoc/TSDoc ajoutée pour l'API publique** (services, composants shared-ui)
+13. [ ] **Pas d'imports lourds** (lodash, moment) → Utiliser alternatives légères
+14. [ ] **NgOptimizedImage** utilisé pour toutes les images
+15. [ ] **Bundle analysé** (si nouvelle feature ou dépendance ajoutée) :
+
+```bash
+npm run analyze:quick
+```
+
+- Augmentation < 20 KB ? ✅ OK
+- Augmentation > 20 KB ? ⚠️ Justifier dans le commit message
+- Augmentation > 50 KB ? ❌ Refactoring requis
 
 ## 📝 Documentation JSDoc/TSDoc (Obligatoire)
 
 Tu DOIS systématiquement :
 
-1. **Documenter l'API publique** : Services, composants shared-ui, guards, interceptors
+1. **Documenter l'API publique** : Services dans `data-access`, composants dans `shared-ui`
 2. **Utiliser les tags Compodoc** : `@usageNotes`, `@category`, `@see`, `@example`
 3. **Documenter inputs/outputs** : Toujours, avec type et description
 4. **Documenter signals publics** : Avec `@readonly` ou `@computed`
@@ -291,29 +303,29 @@ Tu DOIS systématiquement :
 
 ````typescript
 /**
- * Service for managing orders data and operations.
+ * Service for managing contacts data and operations.
  *
- * Handles all HTTP requests related to orders.
+ * Handles all HTTP requests related to contacts.
  *
  * @usageNotes
  * Inject this service:
  * ```typescript
- * private ordersService = inject(OrdersService);
+ * private contactsService = inject(ContactsService);
  * ```
  *
- * @see Order
+ * @see Contact
  * @category Data Access
  */
 @Injectable({ providedIn: 'root' })
-export class OrdersService {
+export class ContactsService {
   /**
-   * Retrieves all orders from the API.
+   * Retrieves all contacts from the API.
    *
-   * @returns Observable of orders array
+   * @returns Observable of contacts array
    * @throws {HttpErrorResponse} When API request fails
    */
-  getOrders(): Observable<Order[]> {
-    return this.http.get<Order[]>(`${API_URL}/orders`);
+  getContacts(): Observable<Contact[]> {
+    return this.http.get<Contact[]>(`${API_URL}/contacts`);
   }
 }
 ````

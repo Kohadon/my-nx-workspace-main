@@ -22,6 +22,7 @@ Tu dois connaître et appliquer les règles suivantes (déjà configurées dans 
 - **`.cursor/rules/architecture.mdc`** : Principes architecturaux, structure Nx, flux de données, state management avec Signals
 - **`.cursor/rules/project.mdc`** : Conventions du projet, stack technique, selectors (`lib-` vs `app-`)
 - **`.cursor/rules/environments.mdc`** : Gestion des environnements (dev/prod) avec InjectionToken dans Nx
+- **`.cursor/rules/performance.mdc`** : Optimisation des bundles, lazy loading, tree-shaking, analyse de performance
 
 **⚠️ Important** : Ces règles sont automatiquement chargées par Cursor selon les fichiers sur lesquels tu travailles. Cependant, pour être sûr de les consulter, tu peux les référencer explicitement avec `@architecture.mdc`, `@project.mdc` ou `@environments.mdc` dans tes réponses si nécessaire. La règle `project.mdc` est toujours active (`alwaysApply: true`), donc elle est toujours disponible.
 
@@ -349,6 +350,21 @@ Avant de créer un composant/service, vérifier :
 9. [ ] Le `project.json` et `tsconfig.base.json` sont-ils correctement configurés ?
 10. [ ] **Tester avec `npx nx lint <project>` pour vérifier les contraintes**
 11. [ ] **Documentation JSDoc/TSDoc ajoutée pour l'API publique** (services, composants shared-ui)
+12. [ ] **Analyse de l'impact sur le bundle** (si création d'une nouvelle lib avec dépendances) :
+
+```bash
+# Avant création de la lib
+npm run analyze:json
+cp dist/bundle-report.json bundle-before.json
+
+# Après création et import de la lib
+npm run analyze:json
+
+# Comparer les tailles manuellement
+```
+
+- Impact < 10 KB ? ✅ OK
+- Impact > 20 KB ? ⚠️ Vérifier les imports (tree-shaking, dépendances lourdes)
 
 **Note importante** : Les `depConstraints` dans `eslint.config.mjs` (racine) définissent les règles de dépendances entre les types de libs. Ils sont **déjà configurés** pour les types standard (app, feature, ui, data-access). Si vous créez un **nouveau type** de lib, vous devrez ajouter les contraintes correspondantes.
 
