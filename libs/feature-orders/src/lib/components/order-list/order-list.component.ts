@@ -6,7 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { OrdersFacade } from '@mini-crm/data-access';
+import { OrdersStore, type OrdersStoreType } from '@mini-crm/data-access';
 import { ConfirmModalComponent } from '@mini-crm/shared-ui';
 
 // Bootstrap Modal type from @types/bootstrap
@@ -43,7 +43,7 @@ declare const bootstrap: {
  * }
  * ```
  *
- * @see OrdersFacade
+ * @see OrdersStore
  * @see ConfirmModalComponent
  * @category Feature Orders
  */
@@ -55,7 +55,7 @@ declare const bootstrap: {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrderListComponent implements OnInit {
-  private readonly ordersFacade = inject(OrdersFacade);
+  private readonly store: OrdersStoreType = inject(OrdersStore);
   private readonly router = inject(Router);
 
   /**
@@ -69,26 +69,38 @@ export class OrderListComponent implements OnInit {
   private readonly MODAL_ID = 'deleteOrderModal';
 
   /**
-   * Orders list from the NgRx store.
+   * Orders list from the SignalStore.
    * @readonly
    */
-  orders = this.ordersFacade.orders;
+  orders = this.store.orders;
 
   /**
-   * Loading state from the NgRx store.
+   * Loading state from the SignalStore.
    * @readonly
    */
-  loading = this.ordersFacade.loading;
+  loading = this.store.loading;
 
   /**
-   * Error message from the NgRx store.
+   * Error message from the SignalStore.
    * @readonly
    */
-  error = this.ordersFacade.error;
+  error = this.store.error;
+
+  /**
+   * Total number of orders (computed signal from store).
+   * @readonly
+   */
+  ordersCount = this.store.ordersCount;
+
+  /**
+   * Total revenue TTC (computed signal from store).
+   * @readonly
+   */
+  totalRevenue = this.store.totalRevenue;
 
   ngOnInit(): void {
     // Load orders on component initialization
-    this.ordersFacade.loadOrders();
+    this.store.loadOrders();
   }
 
   /**
@@ -114,7 +126,7 @@ export class OrderListComponent implements OnInit {
 
   /**
    * Handles the confirmation from the modal.
-   * Dispatches delete action to NgRx store.
+   * Dispatches delete action to SignalStore.
    */
   onConfirmDelete(): void {
     const orderId = this.orderToDeleteId();
@@ -122,8 +134,8 @@ export class OrderListComponent implements OnInit {
       return;
     }
 
-    // Dispatch delete action to NgRx store
-    this.ordersFacade.deleteOrder(String(orderId));
+    // Delete via SignalStore
+    this.store.deleteOrder(String(orderId));
     this.orderToDeleteId.set(null);
   }
 
